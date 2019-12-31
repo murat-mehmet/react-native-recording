@@ -6,7 +6,7 @@ React Native audio recording module used for DSP with Android + iOS
 
 ## Install
 ```
-$ npm i react-native-recording
+$ npm i git://github.com/murat-mehmet/react-native-recording.git
 $ react-native link react-native-recording
 ```
 
