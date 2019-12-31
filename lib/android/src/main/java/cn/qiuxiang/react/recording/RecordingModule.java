@@ -3,6 +3,10 @@ package cn.qiuxiang.react.recording;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.AutomaticGainControl;
+import android.media.audiofx.NoiseSuppressor;
+import android.os.Build;
+import android.util.Base64;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -86,6 +90,11 @@ class RecordingModule extends ReactContextBaseJavaModule {
                 audioFormat,
                 this.bufferSize * 2);
 
+        if (Build.VERSION.SDK_INT >= 16)
+            NoiseSuppressor.create(audioRecord.getAudioSessionId());
+        if (Build.VERSION.SDK_INT >= 16)
+            AutomaticGainControl.create(audioRecord.getAudioSessionId());
+
         recordingThread = new Thread(new Runnable() {
             public void run() {
                 recording();
@@ -115,12 +124,27 @@ class RecordingModule extends ReactContextBaseJavaModule {
     private void recording() {
         short buffer[] = new short[bufferSize];
         while (running && !reactContext.getCatalystInstance().isDestroyed()) {
-            WritableArray data = Arguments.createArray();
+//            WritableArray data = Arguments.createArray();
             audioRecord.read(buffer, 0, bufferSize);
-            for (float value : buffer) {
-                data.pushInt((int) value);
-            }
-            eventEmitter.emit("recording", data);
+
+            byte[] bytesArray = short2byte(buffer);
+            String encoded = Base64.encodeToString(bytesArray, Base64.NO_WRAP);
+//            for (float value : bytesArray) {
+//                data.pushInt((int) value);
+//            }
+            eventEmitter.emit("recording", encoded);
+        }
+    }
+
+    public static byte[] short2byte(short[] paramArrayOfshort) {
+        int j = paramArrayOfshort.length;
+        byte[] arrayOfByte = new byte[j * 2];
+        for (int i = 0;; i++) {
+            if (i >= j)
+                return arrayOfByte;
+            arrayOfByte[i * 2] = (byte)(byte)(paramArrayOfshort[i] & 0xFF);
+            arrayOfByte[i * 2 + 1] = (byte)(byte)(paramArrayOfshort[i] >> 8);
+            paramArrayOfshort[i] = 0;
         }
     }
 }
