@@ -124,14 +124,10 @@ class RecordingModule extends ReactContextBaseJavaModule {
     private void recording() {
         short buffer[] = new short[bufferSize];
         while (running && !reactContext.getCatalystInstance().isDestroyed()) {
-//            WritableArray data = Arguments.createArray();
             audioRecord.read(buffer, 0, bufferSize);
 
             byte[] bytesArray = short2byte(buffer);
             String encoded = Base64.encodeToString(bytesArray, Base64.NO_WRAP);
-//            for (float value : bytesArray) {
-//                data.pushInt((int) value);
-//            }
             eventEmitter.emit("recording", encoded);
         }
     }
@@ -139,11 +135,11 @@ class RecordingModule extends ReactContextBaseJavaModule {
     public static byte[] short2byte(short[] paramArrayOfshort) {
         int j = paramArrayOfshort.length;
         byte[] arrayOfByte = new byte[j * 2];
-        for (int i = 0;; i++) {
+        for (int i = 0; ; i++) {
             if (i >= j)
                 return arrayOfByte;
-            arrayOfByte[i * 2] = (byte)(byte)(paramArrayOfshort[i] & 0xFF);
-            arrayOfByte[i * 2 + 1] = (byte)(byte)(paramArrayOfshort[i] >> 8);
+            arrayOfByte[i * 2] = (byte) (byte) (paramArrayOfshort[i] & 0xFF);
+            arrayOfByte[i * 2 + 1] = (byte) (byte) (paramArrayOfshort[i] >> 8);
             paramArrayOfshort[i] = 0;
         }
     }
