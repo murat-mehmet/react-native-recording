@@ -7,14 +7,18 @@ import android.media.audiofx.AutomaticGainControl;
 import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 import android.util.Base64;
+import android.util.Log;
 
-import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+import androidx.annotation.RequiresApi;
 
 class RecordingModule extends ReactContextBaseJavaModule {
     private static AudioRecord audioRecord;
@@ -23,6 +27,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
     private boolean running;
     private int bufferSize;
     private Thread recordingThread;
+    private boolean isFloat = false;
 
     RecordingModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -71,9 +76,13 @@ class RecordingModule extends ReactContextBaseJavaModule {
         int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
         if (options.hasKey("bitsPerChannel")) {
             int bitsPerChannel = options.getInt("bitsPerChannel");
+            isFloat = false;
 
             if (bitsPerChannel == 8) {
                 audioFormat = AudioFormat.ENCODING_PCM_8BIT;
+            } else if (bitsPerChannel == 32) {
+                audioFormat = AudioFormat.ENCODING_PCM_FLOAT;
+                isFloat = true;
             }
         }
 
@@ -84,7 +93,7 @@ class RecordingModule extends ReactContextBaseJavaModule {
         }
 
         audioRecord = new AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.CAMCORDER,
                 sampleRateInHz,
                 channelConfig,
                 audioFormat,
@@ -122,13 +131,25 @@ class RecordingModule extends ReactContextBaseJavaModule {
     }
 
     private void recording() {
-        short buffer[] = new short[bufferSize];
-        while (running && !reactContext.getCatalystInstance().isDestroyed()) {
-            audioRecord.read(buffer, 0, bufferSize);
-
-            byte[] bytesArray = short2byte(buffer);
-            String encoded = Base64.encodeToString(bytesArray, Base64.NO_WRAP);
-            eventEmitter.emit("recording", encoded);
+        if (isFloat && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            bufferSize = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_FLOAT);
+            Log.d("recorder", "setting buffer size " + bufferSize);
+            float buffer[] = new float[bufferSize / 4];
+            while (running && !reactContext.getCatalystInstance().isDestroyed()) {
+                audioRecord.read(buffer, 0, buffer.length, AudioRecord.READ_BLOCKING);
+                byte[] bytesArray = new byte[buffer.length * 4];
+                ByteBuffer.wrap(bytesArray).order(ByteOrder.nativeOrder()).asFloatBuffer().put(buffer);
+                String encoded = Base64.encodeToString(bytesArray, Base64.NO_WRAP);
+                eventEmitter.emit("recording", encoded);
+            }
+        } else {
+            short buffer[] = new short[bufferSize];
+            while (running && !reactContext.getCatalystInstance().isDestroyed()) {
+                audioRecord.read(buffer, 0, bufferSize);
+                byte[] bytesArray = short2byte(buffer);
+                String encoded = Base64.encodeToString(bytesArray, Base64.NO_WRAP);
+                eventEmitter.emit("recording", encoded);
+            }
         }
     }
 
