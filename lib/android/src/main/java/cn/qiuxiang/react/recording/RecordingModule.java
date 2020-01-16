@@ -132,8 +132,8 @@ class RecordingModule extends ReactContextBaseJavaModule {
 
     private void recording() {
         if (isFloat && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            bufferSize = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_FLOAT);
-            Log.d("recorder", "setting buffer size " + bufferSize);
+//            bufferSize = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_FLOAT);
+//            Log.d("recorder", "setting buffer size " + bufferSize);
             float buffer[] = new float[bufferSize / 4];
             while (running && !reactContext.getCatalystInstance().isDestroyed()) {
                 audioRecord.read(buffer, 0, buffer.length, AudioRecord.READ_BLOCKING);
